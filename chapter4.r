@@ -1,33 +1,118 @@
----
-title: "2.3 Lab: Introduciton to R"
-output: html_notebook
----
+#### 4.6 Lab: Logistic Regression,LDA, QDA, and KNN ####
+library(ISLR)
+names(Smarket)
+dim(Smarket)
+summary(Smarket)
+pairs(Smarket)
+cor(Smarket[,-9])
+attach(Smarket)
+plot(Volume)
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
-Introduction to functions. We'll create vectors x and y
+#### 4.6.2 Logistic Regression ####
+glm.fit=glm(Direction~Lag1+Lag2+Lag3+Lag4+Lag5+Volume, data=Smarket, family=binomial)
+summary(glm.fit)
+coef(glm.fit)
+summary(glm.fit)$coef
+summary(glm.fit)$coef[,4]
+glm.probs=predict(glm.fit, type="response")
+glm.probs[1:10]
+contrasts(Direction)
+glm.pred=rep("Down", 1250)
+glm.pred[glm.probs>0.5]="Up"
+table(glm.pred, Direction, Direction)
+mean(glm.pred==Direction)
+train=(Year<2005)
+train
+Smarket.2005=Smarket[!train,]
+dim(Smarket.2005)
+Direction.2005=Direction[!train]
+glm.fit=glm(Direction~Lag1+Lag2+Lag3+Lag4+Lag5+Volume, data=Smarket, family=binomial, subset=TRUE)
+glm.probs=predict(glm.fit, Smarket.2005, type="response")
+glm.pred=rep("Down", 252)
+glm.pred[glm.probs>0.5]="Up"
+table(glm.pred, Direction.2005)
+mean(glm.pred==Direction.2005)
+mean(glm.pred!=Direction.2005)
+glm.fit=glm(Direction~Lag1+Lag2, data=Smarket, family=binomial, subset=train)
+glm.probs=predict(glm.fit, Smarket.2005, type="response")
+glm.pred=rep("Down", 252)
+glm.pred
+glm.pred[glm.probs>0.5]="Up"
+glm.pred
+table(glm.pred, Direction.2005)
+mean(glm.pred==Direction.2005)
+106/(106+76)
+predict(glm.fit,newdata=data.frame(Lag1=c(1.2, 2.5),Lag2=c(1.1, 2.5)),type = "response")
 
-```{r}
-#### 2.3.1 Basic Commands ####
-x=c(1,3,2,5)
-x
-x=c(1,6,2)
-x
-y=c(1,4,3)
-y
-```
 
-What is the length of these vectors? The Length command gives us that information
+#### 4.6.3 Linear Discriminant Analysis ####
+library(MASS)
+lda.fit=lda(Direction~Lag1+Lag2, data=Smarket, subset = train)
+lda.fit
+plot(lda.fit)
+lda.pred=predict(lda.fit, Smarket.2005)
+names(lda.pred)
+lda.class=lda.pred$class
+table(lda.class, Direction.2005)
+mean(lda.class==Direction.2005)
+sum(lda.pred$posterior[,1]>=0.5)
+sum(lda.pred$posterior[,1]<0.5)
+lda.pred$posterior[1:20,1]
+lda.class[1:20]
+sum(lda.pred$posterior[,1]>0.9)
 
-```{r}
-length(x)
-length(y)
-```
 
-The ls() function gives us a list of all the objects we have saved so far.
+#### 4.6.4 Quadratic Discmininant Analysis ####
+qda.fit=qda(Direction~Lag1+Lag2, Smarket, subset=train)
+qda.fit
+qda.class=predict(qda.fit, Smarket.2005)$class
+table(qda.class, Direction.2005)
+mean(qda.class==Direction.2005)
 
-```{r}
-ls()
-rm(x,y)
-ls()
-```
+#### 4.6.5 K-Nearest Neighbors ####
+library(class)
+train.X=cbind(Lag1,Lag2)[train,]
+test.X=cbind(Lag1,Lag2)[!train,]
+train.Direction=Direction[train]
+set.seed(1)
+knn.pred=knn(train.X, test.X, train.Direction, k=1)
+table(knn.pred, Direction.2005)
+(83+43)/252
 
+knn.pred=knn(train.X, test.X,train.Direction, k=3)
+table(knn.pred, Direction.2005)
+mean(knn.pred==Direction.2005)
+dim(Caravan)
+attach(Caravan)
+summary(Purchase)
+348/5874
+standardized.X=scale(Caravan[,-86])
+var(Caravan[,1])
+var(Caravan[,2])
+var(standardized.X[,1])
+var(standardized.X[,2])
+test=1:1000
+train.X=standardized.X[-test,]
+test.X=standardized.X[test,]
+train.Y=Purchase[-test]
+test.Y=Purchase[test]
+set.seed(1)
+knn.pred=knn(train.X, test.X, train.Y, k=1)
+mean(test.Y!=knn.pred)
+mean(test.Y!="No")
+standardized.X[-test]
+table(knn.pred, test.Y)
+9/(68+9)
+knn.pred=knn(train.X, test.X, train.Y, k=3)
+table(knn.pred, test.Y)
+knn.pred=knn(train.X, test.X, train.Y, k=5)
+table(knn.pred, test.Y)
+glm.fit=glm(Purchase~., data=Caravan, family = binomial, subset = -test)
+summary(glm.fit)
+glm.probs=predict(glm.fit, Caravan[test,], type="response")
+glm.pred=rep("No",1000)
+glm.pred[glm.probs>0.5]="Yes"
+table(glm.pred, test.Y)
+glm.pred=rep("No", 1000)
+glm.pred[glm.probs>0.25]="Yes"
+table(glm.pred, test.Y)
