@@ -1,0 +1,208 @@
+---
+title: "Chapter_6_labs_Ridge_Regression_Lasso_PCR_PLS"
+author: "Russ Conte"
+date: "8/7/2021"
+output: html_document
+---
+ We will be using the Hitters data for these labs
+ 
+```{r}
+library(ISLR)
+sum(is.na(Hitters$Salary))
+Hitters = na.omit(Hitters)
+sum(is.na(Hitters)) # removes all the rows that have missing values
+```
+ 
+## 6.6 Lab 2: Ridge Regression and the Lasso
+
+from the text:
+We will use the glmnet package in order to perform ridge regression and the lasso. The main function in this package is glmnet(), which can be used to fit ridge regression models, lasso models, and more.
+
+```{r}
+x = model.matrix(Salary~., data = Hitters)[,-1]
+y = Hitters$Salary
+
+library(glmnet)
+grid = 10^seq(10, -2, length = 100)
+ridge.mod = glmnet(x, y, alpha = 0, lambda = grid)
+ridge.mod # look at the rile
+dim(coef(ridge.mod)) # look at coefficients
+```
+
+from the text:
+We expect the coefficient estimates to be much smaller, in terms of l2 norm, when a large value of λ is used, as compared to when a small value of λ is used. These are the coefficients when λ = 11,498, along with their l2 norm:
+
+```{r}
+ridge.mod$lambda[50] # 11497.57
+
+coef(ridge.mod)[,50]
+sqrt(sum(coef(ridge.mod)[-1, 50]^2)) # 6.360612 # our test MSE value
+```
+
+from the text:
+In contrast, here are the coefficients when λ = 705, along with their l2 norm. Note the much larger l2 norm of the coefficients associated with this smaller value of λ.
+
+```{r}
+ridge.mod$lambda[60] # 705.4802
+coef(ridge.mod)[,60]
+sqrt(sum(coef(ridge.mod)[-1, 60]^2)) # 57.11001
+```
+
+from the text:
+We can use the predict() function for a number of purposes. For instance, we can obtain the ridge regression coefficients for a new value of λ, say 50:
+
+```{r}
+
+predict(ridge.mod, s = 50, type = "coefficients")[1:20,]
+
+```
+
+from the text: We now split the samples into a training set and a test set in order to estimate the test error of ridge regression and the lasso.
+
+```{r}
+
+set.seed(1)
+train = sample(1:nrow(x), nrow(x)/2)
+test = (-train)
+y.test = y[test]
+
+```
+
+
+Next we fit a ridge regression model on the training set, and evaluate its MSE on the test set, using λ = 4. Note the use of the predict() function again. This time we get predictions for a test set, by replacing type="coefficients" with the newx argument.
+
+```{r}
+ridge.mod = glmnet(x[train,], y[train], alpha = 0, lambda = grid, thresh = 1e-12)
+ridge.pred = predict(ridge.mod, s = 4, newx = x[test,])
+mean((ridge.pred - y.test)^2) # 142199.2 = test MSE, much higher (worse) than prior values
+```
+
+Now let's use cross-validation to choose the optimal tuning paramater, λ
+
+```{r}
+set.seed(1)
+cv.out = cv.glmnet(x[train,], y[train], alpha = 0)
+plot(cv.out)
+bestlam = cv.out$lambda.min
+bestlam # 326.0828 lowest cross validation error!
+
+```
+
+Therefore, we see that the value of λ that results in the smallest cross- validation error is 326.0828 What is the test MSE associated with this value of λ?
+
+```{r}
+ridge.pred = predict(ridge.mod, s = bestlam, newx = x[test,])
+mean((ridge.pred - y.test)^2) # 139856.6 = test MSE
+
+```
+
+from the text:
+This represents a further improvement over the test MSE that we got using λ = 4. Finally, we refit our ridge regression model on the full data set, using the value of λ chosen by cross-validation, and examine the coefficient estimates.
+
+```{r}
+out = glmnet(x, y, alpha = 0)
+predict(object = out, type = "coefficients", s = bestlam)[1:20,]
+
+```
+
+## 6.6.2 The Lasso
+
+from the text:
+
+We saw that ridge regression with a wise choice of λ can outperform least squares as well as the null model on the Hitters data set. We now ask whether the lasso can yield either a more accurate or a more interpretable model than ridge regression.
+
+```{r}
+lasso.mod = glmnet(x[train,], y[train], alpha = 1, lambda = grid)
+plot(lasso.mod)
+
+```
+
+from the text:
+We can see from the coefficient plot that depending on the choice of tuning parameter, some of the coefficients will be exactly equal to zero. We now perform cross-validation and compute the associated test error.
+
+```{r}
+set.seed(1)
+cv.out =cv.glmnet(x[train,], y[train], alpha = 1)
+plot(cv.out)
+bestlam = cv.out$lambda.min
+lasso.pred = predict(lasso.mod,s = bestlam, newx = x[test,])
+mean((lasso.pred - y.test)^2) # 143673.6
+
+```
+
+This is substantially lower than the test set MSE of the null model and of least squares, and very similar to the test MSE of ridge regression with λ chosen by cross-validation.
+
+However, the lasso has a substantial advantage over ridge regression in that the resulting coefficient estimates are sparse. Here we see that 12 of the 19 coefficient estimates are exactly zero. So the lasso model with λ chosen by cross-validation contains only seven variables.
+
+```{r}
+out = glmnet(x, y, alpha = 1, lambda = grid)
+lasso.coef = predict(out, type = "coefficients", s = bestlam)[1:20,]
+lasso.coef
+
+```
+
+#3 6.7 PCR and PLS Regression
+
+from the text:
+Principal components regression (PCR) can be performed using the pcr() function,whichispartoftheplslibrary.WenowapplyPCRtotheHitters pcr() data, in order to predict Salary. 
+
+```{r}
+library(pls)
+set.seed(2)
+pcr.fit = pcr(Salary ~., data = Hitters, scale = TRUE, validation = "CV")
+summary(pcr.fit)
+
+```
+
+from the text:
+We now perform PCR on the training data and evaluate its test set performance.
+
+```{r}
+set.seed(1)
+pcr.fit = pcr(Salary ~., data = Hitters, subset = train, scale= TRUE, validation = "CV")
+validationplot(pcr.fit, val.type = "MSEP")
+
+```
+
+Lowest MSE is when 5 components are used. Calculate the MSE as follows:
+
+```{r}
+pcr.pred = predict(pcr.fit, x[test,], ncomp = 5)
+mean((pcr.pred - y.test)^2) # 142811.8 best MSE
+```
+
+from the text:
+This test set MSE is competitive with the results obtained using ridge re- gression and the lasso. However, as a result of the way PCR is implemented, the final model is more difficult to interpret because it does not perform any kind of variable selection or even directly produce coefficient estimates.
+
+## 6.7.2 Partial Least Squares
+
+from the text:
+We implement partial least squares (PLS) using the plsr() function, also in the pls library. The syntax is just like that of the pcr() function.
+
+```{r}
+set.seed(1)
+pls.fit = plsr(Salary ~ ., data = Hitters, subset = train, scale = TRUE, validation = "CV")
+summary(pls.fit)
+
+```
+
+from the text:
+The lowest cross-validation error occurs when only M = 2 partial least squares directions are used. We now evaluate the corresponding test set MSE.
+
+```{r}
+pls.pred = predict(pls.fit, x[test,], ncomp = 2)
+mean((pls.pred - y.test)^2) #145367.7
+
+```
+
+from the text:
+Finally, we perform PLS using the full data set, using M = 2, the number of components identified by cross-validation.
+
+```{r}
+pls.fit = plsr(Salary ~., data = Hitters, scale = TRUE, ncomp = 2)
+summary(pls.fit)
+
+```
+
+from the text:
+Notice that the percentage of variance in Salary that the two-component PLS fit explains, 46.40 %, is almost as much as that explained using the final seven-component model PCR fit, 46.69 %. This is because PCR only attempts to maximize the amount of variance explained in the predictors, while PLS searches for directions that explain variance in both the predictors and the response.
