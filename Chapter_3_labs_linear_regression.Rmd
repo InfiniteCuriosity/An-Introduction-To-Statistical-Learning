@@ -13,6 +13,7 @@ The library() function is used to load libraries, or groups of functions and dat
 ```{r, libraries}
 library(MASS)
 library(ISLR)
+attach(Boston)
 
 ```
 
@@ -24,7 +25,6 @@ The MASS library contains the Boston data set, which records medv (median house 
 ```{r, predicting medv in the Boston data set}
 
 names(Boston)
-
 
 ```
 
@@ -92,4 +92,85 @@ plot(predict(lm.fit), rstudent(lm.fit))
 
 ## 3.6.3 Multipl Linear Regression
 
+```{r first multiple linear regression examples}
+
+lm.fit = lm(medv~lstat + age, data = Boston)
+summary(lm.fit)
+
+```
+
+## Shorthand in R to include all variables in a regression formula
+
+```{r shorthand in R to include all variables in a regression formula}
+lm.fit = lm(medv~., data = Boston)
+summary(lm.fit)
+```
+
+## Accessing individual components of the solution
+
+from the text:
+We can access the individual components of a summary object by name (type ?summary.lm to see what is available). Hence summary(lm.fit)$r.sq gives us the R2, and summary(lm.fit)$sigma gives us the RSE.
+
+```{r, summary object information}
+summary(lm.fit)$r.sq
+summary(lm.fit)$sigma
+```
+
+## regression using all the variables except one
+
+```{r}
+lm.fit1 = lm(medv~.-age, data = Boston)
+summary(lm.fit1)
+
+```
+
+## 3.6.4 Interaction Terms (from within the summary function - nice!!)
+
+```{r}
+
+summary(lm(medv~lstat*age, data = Boston))
+
+```
+
+## 3.6.5 Non-linear Transformations of the Predictors
+
+from the text:
+The lm() function can also accommodate non-linear transformations of the predictors. For instance, given a predictor X, we can create a predictor X2 using I(X^2). 
+
+```{r non-linear transformations of the predictors}
+
+lm.fit2 = lm(medv~lstat + I(lstat^2))
+summary(lm.fit2)
+
+```
+
+## We use the anova() function to further quantify the extent to which the quadric fit is superior to the linear fit
+
+```{r}
+
+lm.fit = lm(medv~lstat)
+anova(lm.fit, lm.fit2)
+
+```
+
+## 3.6.6 Qualitative Predictors
+
+We will attempt to predict sales of car seats in 400 locations, based on a number of predcitors
+
+```{r}
+
+attach(Carseats)
+names(Carseats)
+
+lm.fit = lm(Sales~. + Income:Advertising+Price:Age, data = Carseats)
+summary(lm.fit)
+```
+
+## the Contrasts function returns the coding that R uses for the dummy variables
+
+```{r}
+
+contrasts(ShelveLoc)
+
+```
 
