@@ -5,27 +5,88 @@ date: "8/6/2021"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-print("this is a test")
+# 2.3.1 Basic Commands
+
+
+```{r Chapter 2 labs, include=FALSE}
+x <-  c(1,3,2, 5) # a basic vector
+x # returns the vector
+
+x <-  c(1, 6, 2)
+x
+
+y <- c(1, 4,3)
+y # returns y
 ```
 
-## R Markdown
+## Adding two sets of numbers together
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+From the text:
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+We can tell R to add two sets of numbers together. It will then add the first number from x to the first number from y, and so on. However, x and y should be the same length. We can check their length using the length() function.
 
-```{r cars}
-summary(cars)
+```{r Adding two sets of numbers together}
+length(x)
+length(y)
+# note length(x) = length(y)
+x + y 
+
 ```
 
-## Including Plots
+## ls() allows us to look at a list of ALL of the objects we have saved so far
 
-You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r ls(), echo=FALSE}
+ls()
+rm(x,y) # removes specified items
+ls() # checks which objects we have - note we don't have any 
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## Making a matrix
+```{r Making a matrix}
+x = matrix(data = c(1,2,3,4), nrow = 2, ncol = 2)
+x
+
+# same idea, done a different way:
+x = matrix(c(1,2,3,4),2,2)
+x
+
+# note that it is possible to assign by rows or columns
+matrix(c(1,2,3,4),2,2,byrow = TRUE)
+
+# note that it's possible to apply functions, such as sqrt and ^2 to matrices
+
+sqrt(x)
+x^2
+x^2.7182818
+```
+
+```{r, rnorm function}
+x=rnorm(50) # will generate 50 random normal values
+y = x + rnorm(50, mean = 50, sd = 0.1)
+cor(x,y)
+
+```
+
+## to create reproducible code, we can set the seed
+```{r, Set Seed}
+set.seed(1303)
+rnorm(50)
+
+
+```
+
+## using mean and var with a vector of numbers
+
+```{r, mean and var with a vector of numbers}
+set.seed(3)
+y = rnorm(100)
+mean(y)
+var(y)
+sqrt(var(y))
+sd(y)
+
+```
+
+## 2.3.2 Graphics
