@@ -1,0 +1,135 @@
+---
+title: "Chapter_7_Non-Linear_Modeling"
+author: "Russ Conte"
+date: "8/7/2021"
+output: html_document
+---
+
+## 7.8 Lab: Non—Linear Modeling
+
+In this lab, we re-analyze the Wage data considered in the examples through- out this chapter, in order to illustrate the fact that many of the complex non-linear fitting procedures discussed can be easily implemented in R. We begin by loading the ISLR library, which contains the data.
+
+```{r}
+library(ISLR)
+attach(Wage)
+```
+
+## 7.8.1 Polynomial Regression and Step Functions
+
+```{r}
+fit = lm(wage~poly(age, 4), data = Wage)
+coef(summary(fit))
+```
+
+from the text:
+we can also use poly() to obtain age, age^2, age^3 and age^4 directly, if we prefer. We can do this by using the raw=TRUE argument to the poly() function.
+
+```{r}
+
+fit2 = lm(wage~poly(age, 4, raw = T), data = Wage)
+coef(summary(fit2))
+
+```
+
+from the text:
+There are several other equivalent ways of fitting this model, which show- case the flexibility of the formula language in R. For example:
+
+```{r}
+fit2a = lm(wage~age + I(age^2) + I(age^3) + I(age^4), data = Wage)
+coef(fit2a)
+
+```
+
+This simply creates the polynomial basis functions on the fly, taking care to protect terms like age^2 via the wrapper function I()
+
+
+We now create a grid of values for age at which we want predictions, and then call the generic predict() function, specifying that we want standard errors as well.
+
+```{r}
+agelims = range(age)
+age.grid = seq(from = agelims[1], to = agelims[2])
+preds = predict(fit, newdata = list(age = age.grid), se = TRUE)
+se.bands = cbind(preds$fit + 2*preds$se.fit, preds$fit - 2*preds$se.fit)
+
+# next we plot the data and add the fit from the degree-4 polynomial
+
+par(mfrow = c(1,2),mar = c(4.5, 4.5, 1,1), oma = c(0, 0, 4, 0))
+plot(age, wage, xlim = agelims, cex = 0.5, col = "darkgrey")
+title("Degree-4 Polynomial", outer = TRUE)
+lines(age.grid, preds$fit, lwd = 2, col = "blue")
+matlines(age.grid, se.bands,lwd = 1, col = "blue", lty = 3)
+
+```
+
+Here the mar and oma arguments to par() allow us to control the margins of the plot, and the title() function creates a figure title that spans both subplots.
+
+In performing a polynomial regression we must decide on the degree of the polynomial to use. One way to do this is by using hypothesis tests. We now fit models ranging from linear to a degree-5 polynomial and seek to determine the simplest model which is sufficient to explain the relationship wrapper between wage and age. We use the anova() function, which performs an analysis of variance (ANOVA, using an F-test) in order to test the null hypothesis that a model M1 is sufficient to explain the data against the alternative hypothesis that a more complex model M2 is required. In order to use the anova() function, M1 and M2 must be nested models: the predictors in M1 must be a subset of the predictors in M2. In this case, we fit five different models and sequentially compare the simpler model to the more complex model.
+
+```{r}
+fit.1 = lm(wage~age, data = Wage)
+fit.2 = lm(wage~poly(age, 2), data = Wage)
+fit.3 = lm(wage~poly(age, 3), data = Wage)
+fit.4 = lm(wage~poly(age, 4), data = Wage)
+fit.5 = lm(wage~poly(age, 5), data = Wage)
+
+anova(fit.1, fit.2, fit.3, fit.4, fit.5)
+
+```
+
+The p-value comparing the linear Model 1 to the quadratic Model 2 is essentially zero (<10−15), indicating that a linear fit is not sufficient. Sim- ilarly the p-value comparing the quadratic Model 2 to the cubic Model 3 is very low (0.0017), so the quadratic fit is also insufficient. The p-value comparing the cubic and degree-4 polynomials, Model 3 and Model 4, is ap- proximately 5 % while the degree-5 polynomial Model 5 seems unnecessary because its p-value is 0.37. Hence, either a cubic or a quartic polynomial appear to provide a reasonable fit to the data, but lower- or higher-order models are not justified.
+
+## Logistic regression using polynomial functions
+
+Next we consider the task of predicting whether an individual earns more than $250,000 per year. We proceed much as before, except that first we create the appropriate response vector, and then apply the glm() function using family="binomial" in order to fit a polynomial logistic regression model.
+
+```{r}
+
+fit = glm(I(wage>250)~poly(age, 4), data = Wage, family = binomial)
+
+```
+
+## Once again, we make predictions using the predict() function.
+
+```{r}
+preds = predict(fit, newdata = list(age = age.grid), se = T)
+
+# In order to obtain the predictions, we have to transform the results
+
+pfit = exp(preds$fit) / (1 + exp(preds$fit))
+se.bands.logit = cbind(preds$fit + 2*preds$se.fit, preds$fit - 2*preds$se.fit)
+se.bands = exp(se.bands.logit) / (1 + exp(se.bands.logit))
+
+```
+
+Finally, the right-hand plot from Figure 7.1 was made as follows:
+
+```{r}
+plot(age, I(wage>250), xlim = agelims, type = "n", ylim = c(0, 0.2))
+points(jitter(age), I((wage>250) / 5), cex = 0.5, pch = "|", col = "darkgrey")
+lines(age.grid, pfit, lwd = 2, col = "blue")
+matlines(age.grid, se.bands, lwd = 1, col = "blue", lty = 3)
+
+```
+
+## step function
+In order to fit a step function, as discussed in Section 7.2, we use the cut() function.
+
+```{r}
+table(cut(age, 4))
+fit = lm(wage~cut(age, 4), data = Wage)
+coef(summary(fit))
+```
+
+## 7.8.2 Splines
+
+In order to fit regression splines in R, we use the splines library. In Section
+7.4, we saw that regression splines can be fit by constructing an appropriate matrix of basis functions. The bs() function generates the entire matrix of basis functions for splines with the specified set of knots. By default, cubic bs() splines are produced. Fitting wage to age using a regression spline is simple:
+
+```{r}
+library(splines)
+fit = lm(wage~bs(age, knots = c(25, 40, 60)), data = Wage)
+pred = predict(fit, newdata = list(age = age.grid), se = T)
+plot(age, wage, col = "gray")
+lines(age.grid, pred$fit, lwd = 2)
+lines(age.grid, pred$fit + 2*pred$se, lty = "dashed")
+lines(age.grid, pred$fit - 2*pred$se, lty = "dashed")
