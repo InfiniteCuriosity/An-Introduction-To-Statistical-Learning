@@ -1,0 +1,95 @@
+---
+title: "3. Linear Regression Labs"
+author: "Russ Conte"
+date: "8/7/2021"
+output: html_document
+---
+
+## 3.6.1 Libraries
+
+From the text:
+The library() function is used to load libraries, or groups of functions and data sets that are not included in the base R distribution. 
+
+```{r, libraries}
+library(MASS)
+library(ISLR)
+
+```
+
+## 3.6.2 Simple Linear Regression
+
+From the text:
+The MASS library contains the Boston data set, which records medv (median house value) for 506 neighborhoods around Boston. We will seek to predict medv using 13 predictors such as rm (average number of rooms per house), age (average age of houses), and lstat (percent of households with low socioeconomic status).
+
+```{r, predicting medv in the Boston data set}
+
+names(Boston)
+
+
+```
+
+From the text:
+We will start by using the lm() function to fit a simple linear regression
+model, with medv as the response and lstat as the predictor. The basic lm() syntax is lm(y∼x,data), where y is the response, x is the predictor, and
+data is the data set in which these two variables are kept.
+
+```{r, first linear models}
+
+lm.fit = lm(medv~lstat, data = Boston)
+summary(lm.fit) # provides a summary of the regression model
+names(lm.fit) # which other pieces of information are stored in lm.fit
+```
+
+## Confidence intervals for lm.fit
+
+```{r confidence intervals for lm.fit}
+confint(lm.fit)
+
+```
+
+## The Predict function
+
+```{r the predict function}
+
+predict(lm.fit, data.frame(lstat = c(5, 10, 15)), interval = "confidence")
+
+```
+
+## Plot our regression solution
+
+```{r plot our simple regression solution}
+
+plot(x = Boston$lstat, y = Boston$medv)
+abline(lm.fit) # only runs if "Show output inline" is unchecked in preferences for RStudio
+abline(lm.fit, lwd = 3) # a thicker line
+abline(lm.fit, wd = 3, col = "red")
+plot(Boston$lstat, Boston$medv, col = "red")
+plot(lstat, medv, pch = 20)
+plot(lstat, medv, pch = "+")
+plot(1:20, 1:20, pch = 1:20)
+
+```
+
+## Viewing all four residual plots at once :)
+
+```{r, viewing all four residual plots at one}
+
+par(mfrow = c(2,2))
+plot(lm.fit)
+
+```
+
+From the text: we can compute the residuals from a linear regression fit using the residuals() function.
+
+```{r plot residuals}
+
+plot(predict(lm.fit), residuals(lm.fit))
+plot(predict(lm.fit), rstudent(lm.fit))
+
+```
+
+## which.max identifies the index of the largest element of a vector
+
+## 3.6.3 Multipl Linear Regression
+
+
