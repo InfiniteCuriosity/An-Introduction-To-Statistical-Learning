@@ -1,0 +1,177 @@
+---
+title: "Chapter_5_Resampling"
+author: "Russ Conte"
+date: "8/7/2021"
+output: html_document
+---
+
+## 5.3 Lab: Cross-Validation and the Bootstrap
+
+## 5.3.1 - The Validation Set Approach
+
+from the text:
+We explore the use of the validation set approach in order to estimate the test error rates that result from fitting various linear models on the Auto data set.
+
+```{r}
+library(ISLR)
+set.seed(1)
+train = sample(392, 196)
+attach(Auto)
+```
+
+Run linear regression only on the training set of data:
+
+```{r}
+lm.fit = lm(mpg~horsepower, data = Auto, subset = train)
+mean((mpg-predict(lm.fit,Auto))[-train]^2) # calculates the MSE of the observations = 23.26601
+```
+
+From the text:
+We can use the poly() function to estimate the test error for the quadratic and cubic regressions.
+
+```{r}
+lm.fit2 = lm(mpg~poly(horsepower, 2), data = Auto, subset = train)
+mean((mpg - predict(lm.fit2, Auto))[-train]^2) # 18.71646 better than the linear model
+
+lm.fit3 = lm(mpg ~ poly(horsepower, 3), data = Auto, subset = train)
+mean((mpg-predict(lm.fit3, Auto))[-train]^2) # 18.79401
+
+```
+
+From the text:
+These results are consistent with our previous findings: a model that predicts mpg using a quadratic function of horsepower performs better than a model that involves only a linear function of horsepower, and there is little evidence in favor of a model that uses a cubic function of horsepower.
+
+## 5.3.2 Leave-One-Out Cross Validation
+
+from the text:
+In this lab, we will perform linear regression using the glm() function rather than the lm() function because the former can be used together with cv.glm(). The cv.glm() function is part of the boot library.
+
+```{r}
+library(boot)
+glm.fit = glm(mpg~horsepower, data = Auto)
+cv.err = cv.glm(Auto, glm.fit)
+cv.err$delta # this gives an estimate of the test error
+
+```
+
+from the text:
+We can repeat this procedure for increasingly complex polynomial fits. To automate the process, we use the for() function to initiate a for loop which iteratively fits polynomial regressions for polynomials of order i = 1 to i = 5, computes the associated cross-validation error, and stores it in the ith element of the vector cv.error. We begin by initializing the vector. This command will likely take a couple of minutes to run.
+
+```{r}
+
+cv.error = rep(0,5)
+for (i in 1:5){
+  glm.fit = glm(mpg~poly(horsepower, i), data = Auto)
+  cv.error[i] = cv.glm(Auto, glm.fit)$delta[i]
+}
+cv.error # 24.23151 19.24787 So there is an advantage for the quadratic, but not any higher power
+
+
+```
+
+## 5.3.3 K-Fold Cross-Validation
+
+from the text:
+The cv.glm() function can also be used to implement k-fold CV. Below we use k = 10, a common choice for k, on the Auto data set. We once again set a random seed and initialize a vector in which we will store the CV errors corresponding to the polynomial fits of orders one to ten.
+
+```{r}
+
+set.seed(17)
+cv.error.10 = rep(0, 10)
+for (i in 1:10) {
+  glm.fit = glm(mpg~poly(horsepower, i), data = Auto)
+  cv.error.10[i] = cv.glm(Auto, glm.fit, K = 10)$delta[i]
+}
+cv.error.10 # 4.27207 19.25393
+
+```
+
+## 5.3.4 The Bootstrap
+
+from the text:
+ost all situations. No complicated mathematical calculations are required. Performing a bootstrap analysis in R entails only two steps. First, we must create a function that computes the statistic of interest. Second, we use the boot() function, which is part of the boot library, to perform the bootstrap by repeatedly sampling observations from the data set with replacement.
+
+The Portfolio data set in the ISLR package is described in Section 5.2. To illustrate the use of the bootstrap on this data, we must first create a function, alpha.fn(), which takes as input the (X,Y) data as well as a vector indicating which observations should be used to estimate α. The function then outputs the estimate for α based on the selected observations.
+
+```{r}
+alpha.fn = function(data, index){
+  X = data$X[index]
+  Y = data$Y[index]
+  return((var(Y) - cov(X, Y)) / var(X) + var(Y) - 2*cov(X, Y))
+}
+
+###This function returns, or outputs, an estimate for α based on applying (5.7) to the observations indexed by the argument index. For instance, the following command tells R to estimate α using all 100 observations.
+
+alpha.fn(Portfolio, 1:100) # 0.6596797
+```
+
+From the text:
+The next command uses the sample() function to randomly select 100 ob- servations from the range 1 to 100, with replacement. This is equivalent to constructing a new bootstrap data set and recomputing αˆ based on the new data set.
+
+
+```{r}
+set.seed(1)
+alpha.fn(Portfolio, sample(100, 100,replace = T)) # 1.077955
+
+```
+
+From the text:
+We can implement a bootstrap analysis by performing this command many times, recording all of the corresponding estimates for α, and computing boot() the resulting standard deviation. However, the boot() function automates this approach. Below we produce R = 1, 000 bootstrap estimates for α.
+
+```{r}
+boot(Portfolio, alpha.fn, R = 1000)
+
+```
+
+## Estimating the accuracy of a Linear Regression Model
+
+From the text:
+The bootstrap approach can be used to assess the variability of the coef- ficient estimates and predictions from a statistical learning method. Here we use the bootstrap approach in order to assess the variability of the estimates for β0 and β1, the intercept and slope terms for the linear regres- sion model that uses horsepower to predict mpg in the Auto data set.
+
+```{r}
+
+boot.fn = function(data, index)
+  return(coef(lm(mpg~horsepower, data = data,subset = index)))
+boot.fn(Auto, 1:392) # Intercept = 39.9358610, horsepower = -0.1578447
+
+```
+
+from the text:
+The boot.fn() function can also be used in order to create bootstrap esti- mates for the intercept and slope terms by randomly sampling from among the observations with replacement. Here we give two examples.
+
+```{r}
+
+set.seed(1)
+boot.fn(Auto, sample(392, 392,replace = T)) # intercept = 40.3404517, horsepower = -0.1634868
+
+```
+
+from the text:
+Next, we use the boot() function to compute the standard errors of 1,000 bootstrap estimates for the intercept and slope terms.
+
+```{r}
+boot(Auto, boot.fn, 1000)
+
+```
+
+
+from the text:
+This indicates that the bootstrap estimate for SE(βˆ0) is 0.86, and that the bootstrap estimate for SE(βˆ1) is 0.0074. As discussed in Section 3.1.2,
+standard formulas can be used to compute the standard errors for the regression coefficients in a linear model. These can be obtained using the summary() function.
+
+```{r}
+summary(lm(mpg~horsepower, data = Auto))$coef
+
+```
+
+from the text:
+Below we compute the bootstrap standard error estimates and the stan- dard linear regression estimates that result from fitting the quadratic model to the data. Since this model provides a good fit to the data (Figure 3.8), there is now a better correspondence between the bootstrap estimates and the standard estimates of SE(βˆ0), SE(βˆ1) and SE(βˆ2).
+
+```{r}
+boot.fn = function(data, index)
+  coefficients(lm(mpg~horsepower + I(horsepower^2), data = data, subset = index))
+set.seed(1)
+boot(Auto, boot.fn, 1000)
+
+```
+
